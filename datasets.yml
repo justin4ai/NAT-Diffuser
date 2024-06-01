@@ -1,0 +1,7 @@
+- dataset: churches
+  path: "/datasets/lsun"
+- dataset: bedrooms
+  path: "/datasets/lsun"
+- dataset: ffhq
+  # path: "/datasets/FFHQ"
+  path: "../../datasets/train/"

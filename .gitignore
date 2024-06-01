@@ -1,0 +1,12 @@
+*.pkl
+*.th
+__pycache__/
+logs/
+_backup_pkl_files/
+latents/
+*images/
+.vscode/settings.json
+_cache_ReposdatasetsLSUNchurchoutdoortrainlmdb
+*_cache_*
+_pkl_files/
+*.txt
