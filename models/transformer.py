@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.init import trunc_normal_
 import warnings
 from natten.functional import natten2dqkrpb, natten2dav
 # from natten import (
@@ -73,26 +74,23 @@ class CausalSelfAttention(nn.Module):
         y = self.resid_drop(self.proj(y)) # torch.Size([20, 256, 512])
         return y, present
     
-
 class HydraNeighborhoodAttention(nn.Module):
-
-    def __init__(self, H):
+    def __init__(self,
+                 dim,
+                 kernel_sizes, # Array for kernel sizes
+                 num_heads,
+                 qkv_bias=True,
+                 qk_scale=None,
+                 attn_drop=0.,
+                 proj_drop=0.,
+                 dilations=[1], # Array of dilations
+                 ):
         super().__init__()
-        dim = H.bert_n_emb
-        kernel_sizes = [(H.attn_resolutions)[0] - 1]  # Assuming attn_resolutions is used as kernel_sizes
-        print(kernel_sizes)
-        num_heads = H.bert_n_head
-        qkv_bias = True  # Default value
-        qk_scale = None  # Default value
-        attn_drop = H.attn_pdrop
-        proj_drop = H.resid_pdrop
-        dilations = [1]  # Default value
-
         if len(kernel_sizes) == 1 and len(dilations) != 1:
             kernel_sizes = [kernel_sizes[0] for _ in range(len(dilations))]
         elif len(dilations) == 1 and len(kernel_sizes) != 1:
             dilations = [dilations[0] for _ in range(len(kernel_sizes))]
-        assert(len(kernel_sizes) == len(dilations)), f"Number of kernels ({(kernel_sizes)}) must be the same as number of dilations ({(dilations)})"
+        assert(len(kernel_sizes) == len(dilations)),f"Number of kernels ({(kernel_sizes)}) must be the same as number of dilations ({(dilations)})"
         self.num_splits = len(kernel_sizes)
         self.num_heads = num_heads
         self.kernel_sizes = kernel_sizes
@@ -104,47 +102,46 @@ class HydraNeighborhoodAttention(nn.Module):
         asserts = []
         for i in range(len(kernel_sizes)):
             asserts.append(kernel_sizes[i] > 1 and kernel_sizes[i] % 2 == 1)
-            if not asserts[i]:
+            if asserts[i] == False:
                 warnings.warn(f"Kernel_size {kernel_sizes[i]} needs to be >1 and odd")
-        assert all(asserts), f"Kernel sizes must be >1 AND odd. Got {kernel_sizes}"
+        assert(all(asserts)),f"Kernel sizes must be >1 AND odd. Got {kernel_sizes}"
 
         self.window_size = []
         for i in range(len(dilations)):
             self.window_size.append(self.kernel_sizes[i] * self.dilations[i])
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+        # Needs to be fixed if we want uneven head splits. // is floored
+        # division
         if num_heads % len(kernel_sizes) == 0:
-            self.rpb = nn.ParameterList([nn.Parameter(torch.zeros(num_heads // self.num_splits, (2*k-1), (2*k-1))) for k in kernel_sizes])
+            self.rpb = nn.ParameterList([nn.Parameter(torch.zeros(num_heads//self.num_splits, (2*k-1), (2*k-1))) for k in kernel_sizes])
             self.clean_partition = True
         else:
             diff = num_heads - self.num_splits * (num_heads // self.num_splits)
-            rpb = [nn.Parameter(torch.zeros(num_heads // self.num_splits, (2*k-1), (2*k-1))) for k in kernel_sizes[:-diff]]
+            rpb = [nn.Parameter(torch.zeros(num_heads//self.num_splits, (2*k-1), (2*k-1))) for k in kernel_sizes[:-diff]]
             for k in kernel_sizes[-diff:]:
-                rpb.append(nn.Parameter(torch.zeros(num_heads // self.num_splits + 1, (2*k-1), (2*k-1))))
-            assert sum(r.shape[0] for r in rpb) == num_heads, f"Got {sum(r.shape[0] for r in rpb)} heads."
+                rpb.append(nn.Parameter(torch.zeros(num_heads//self.num_splits + 1, (2*k-1), (2*k-1))))
+            assert(sum(r.shape[0] for r in rpb) == num_heads),f"Got {sum(r.shape[0] for r in rpb)} heads."
             self.rpb = nn.ParameterList(rpb)
 
             self.clean_partition = False
             self.shapes = [r.shape[0] for r in rpb]
-            warnings.warn(f"Number of partitions ({self.num_splits}) do not "
-                          f"evenly divide the number of heads ({self.num_heads}). "
-                          f"We evenly divide the remainder between the last {diff} "
-                          f"heads. This may cause unexpected behavior. Your head "
-                          f"partitions look like {self.shapes}")
+            warnings.warn(f"Number of partitions ({self.num_splits}) do not "\
+                    f"evenly divide the number of heads ({self.num_heads}). "\
+                    f"We evenly divide the remainder between the last {diff} "\
+                    f"heads This may cause unexpected behavior. Your head " \
+                    f"partitions look like {self.shapes}")
 
-        for rpb in self.rpb:
-            nn.init.trunc_normal_(rpb, std=0.02, mean=0.0, a=-2., b=2.)
-
+        [trunc_normal_(rpb, std=0.02, mean=0.0, a=-2., b=2.) for rpb in self.rpb]
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
-        B, T, C = x.size()
-        H, W = int(math.sqrt(T)), int(math.sqrt(T))
-        x = x.view(B, H, W, C)
-
+        B, Hp, Wp, C = x.shape
+        H, W = Hp, Wp
         qkv = self.qkv(x).reshape(B, H, W, 3, self.num_heads, self.head_dim).permute(3, 0, 4, 1, 2, 5)
+
         q, k, v = qkv.chunk(3, dim=0)
         q = q.squeeze(0) * self.scale
         k = k.squeeze(0)
@@ -163,19 +160,20 @@ class HydraNeighborhoodAttention(nn.Module):
                 _q.append(q[:, i:i+h, :, :])
                 _k.append(k[:, i:i+h, :, :])
                 _v.append(v[:, i:i+h, :, :])
-                i = i + h
+                i = i+h
             q, k, v = _q, _k, _v
 
-        attention = [self.natten2dqkrpb(_q, _k, _rpb, _kernel_size, _dilation) 
-                     for _q, _k, _rpb, _kernel_size, _dilation in zip(q, k, self.rpb, self.kernel_sizes, self.dilations)]
+
+        attention = [natten2dqkrpb(_q, _k, _rpb, _kernel_size, _dilation) \
+                     for _q,_k,_rpb,_kernel_size,_dilation in zip(q, k, self.rpb, self.kernel_sizes, self.dilations)]
         attention = [a.softmax(dim=-1) for a in attention]
         attention = [self.attn_drop(a) for a in attention]
 
-        x = [self.natten2dav(_attn, _v, _k, _d) 
+        x = [natten2dav(_attn, _v, _k, _d) \
              for _attn, _v, _k, _d in zip(attention, v, self.kernel_sizes, self.dilations)]
 
         x = torch.cat(x, dim=1)
-        x = x.permute(0, 2, 3, 1, 4).reshape(B, T, C)
+        x = x.permute(0, 2, 3, 1, 4).reshape(B, H, W, C)
         return self.proj_drop(self.proj(x))
 
 class Block(nn.Module):
@@ -188,10 +186,11 @@ class Block(nn.Module):
         self.attn = CausalSelfAttention(H)
         
         h_params = H.items()
-        # param.txt 파일로 저장
+        # Save parameters of H
         with open("param.txt", "w") as file:
             for key, value in h_params:
                 file.write(f"{key}: {value}\n")
+
         #self.attn = HydraNeighborhoodAttention(H)
         self.mlp = nn.Sequential(
             nn.Linear(H.bert_n_emb, 4 * H.bert_n_emb),
@@ -202,13 +201,16 @@ class Block(nn.Module):
 
     def forward(self, x, layer_past=None, return_present=False):
 
-        attn, present = self.attn(self.ln1(x), layer_past)
-        x = x + attn
-        x = x + self.mlp(self.ln2(x))
+        attn, present = self.attn(self.ln1(x), layer_past) # torch.Size([20, 256, 512])
+
+        x = x + attn # torch.Size([20, 256, 512])
+
+        x = x + self.mlp(self.ln2(x)) # torch.Size([20, 256, 512])
+
 
         if layer_past is not None or return_present:
             return x, present
-        return x
+        return x # torch.Size([20, 256, 512])
 
 
 class Transformer(nn.Module):
@@ -217,7 +219,7 @@ class Transformer(nn.Module):
     def __init__(self, H):
         super().__init__()
 
-        self.vocab_size = H.codebook_size + 1
+        self.vocab_size = H.codebook_size + 1 # 1025
         self.n_embd = H.bert_n_emb
         self.block_size = H.block_size
         self.n_layers = H.bert_n_layers
@@ -226,7 +228,7 @@ class Transformer(nn.Module):
         if self.causal:
             self.vocab_size = H.codebook_size
 
-        self.tok_emb = nn.Embedding(self.vocab_size, self.n_embd)
+        self.tok_emb = nn.Embedding(self.vocab_size, self.n_embd) # 512-dimensional emb
         self.pos_emb = nn.Parameter(
             torch.zeros(1, self.block_size, self.n_embd))
         self.start_tok = nn.Parameter(torch.zeros(1, 1, self.n_embd))
@@ -252,9 +254,10 @@ class Transformer(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def forward(self, idx, t=None):
+    def forward(self, idx, t=None): # torch.Size([20, 256])
         # each index maps to a (learnable) vector
-        token_embeddings = self.tok_emb(idx)
+
+        token_embeddings = self.tok_emb(idx) # torch.Size([20, 256, 512])
 
         if self.causal:
             token_embeddings = torch.cat(
@@ -272,9 +275,12 @@ class Transformer(nn.Module):
         x = self.drop(x)
 
         for block in self.blocks:
+            # torch.Size([20, 256, 512])
             x = block(x)
+            # torch.Size([20, 256, 512])
 
         x = self.ln_f(x)
         logits = self.head(x)
+        print(f"ouptut shape : {logits.size()}") # ouptut shape : torch.Size([20, 256, 1024])
 
         return logits

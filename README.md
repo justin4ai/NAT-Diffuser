@@ -5,7 +5,7 @@
 
 
 
-![front_page_sample](assets/diagram.png)
+![front_page_sample](assets/NAT-Diffuser.png)
 
 
 ## Setup
