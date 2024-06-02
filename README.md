@@ -16,12 +16,12 @@
 
 To run the code in this repository we recommend you set up a virtual environment using [conda](https://docs.conda.io/en/latest/). To get set up quickly, use [miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
-Run the following command to clone this repo using [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and create and activate the conda environment `unleashing`:
+Run the following command to clone this repo using [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and create and activate the conda environment `natdiff`:
 
 ```
-git clone https://github.com/samb-t/unleashing-transformers.git && cd unleashing-transformers
-conda create --name unleashing --file requirements.yml
-conda activate unleashing  
+git clone https://github.com/justin4ai/NAT-Diffuser.git && cd NAT-Diffuser
+conda create --name natdiff --file requirements.yml
+conda activate natdiff  
 ```
 
 
@@ -55,16 +55,49 @@ To configure the default paths for datasets used for training the models in this
 In this project, we used dataset from [140k Real and Fake Faces](https://www.kaggle.com/datasets/xhlulu/140k-real-and-fake-faces?select=train.csv) for Deepfake Detection Challenge in Kaggle. Note there are 50k real iamges among 140k.
 
 ### Pre-Trained Models
-Pre-trained models can be found [here](https://drive.google.com/drive/folders/1pjTYcm-2NNzuAiNEO24gSt9dXu_kGQ6b?usp=sharing). To obtain all models, download the logs folder to the root directory of this repo.
+Pre-trained models can be found [here](https://drive.google.com/drive/folders/1DhgimU0onrKb4codFH_5PzJ0K6RpWssE?usp=sharing). With checkpoints trained on various datasets provided by Unleashing Transformer author, we also provide some more pre-trained models on the **140k Real and Fake Faces**. 
 
-We also provide some more pre-trained models on the **140k Real and Fake Faces**. [Coming soon]
+```
+.
+├── logs
+│   ├── absorbing_ffhq
+│   │   └── saved_models
+│   │       └── absorbing_125000.th
+│   └── vqgan_ffhq
+│       └── saved_models
+│           └── vqgan_ema_1225000.th
+├── logs_pretrained
+│   ├── absorbing_bedrooms
+│   │   └── saved_models
+│   │       └── absorbing_ema_2000000.th
+│   ├── absorbing_churches
+│   │   └── saved_models
+│   │       └── absorbing_ema_2000000.th
+│   ├── absorbing_ffhq
+│   │   └── saved_models
+│   │       └── absorbing_ema_900000.th
+│   ├── vqgan_bedrooms
+│   │   └── saved_models
+│   │       └── vqgan_ema_2200000.th
+│   ├── vqgan_churches
+│   │   └── saved_models
+│   │       └── vqgan_ema_2200000.th
+│   └── vqgan_ffhq
+│       └── saved_models
+│           └── vqgan_ema_1400000.th
+└── sample_ffhq.sh
+```
+
+Note the checkpoints under ```log``` folder are trained on 5k real images from **140k Real and Fake Faces** by us.
+- vqgan_ema_1225000.th : --batch_size 64, ~2 days on H100
+- absorbing_125000.th : --batch_size 256, ~1 day on H100
+
 
 ## Commands
-This section contains details on the basic commands for training and calculating metrics on the Absorbing Diffusion models. All training was completed on a single NVIDIA RTX 2080 Ti and these commands presume the same level of hardware. If your GPU has less VRAM than a 2080 Ti then you may need to train using smaller batch sizes and/or smaller models than the defaults.
+If your GPU has less VRAM than a 2080 Ti then you may need to train using smaller batch sizes and/or smaller models than the defaults.
 
 For a detailed list of all commands options, including altering model architecture, logging output, checkpointing frequency, etc., please add the `--help` flag to the end of your command.
 
-All commands should be run from the head directory, i.e. the directory containing the README file. 
 
 ### Set up visdom server
 
@@ -78,7 +111,7 @@ This starts a visdom server listening on port 8097, which is the default used by
 
 To specify a different port when training any models, use the `--visdom_port` flag.
 
-### Train a Vector-Quantized autoencoder on LSUN Churches
+### Train a Vector-Quantized autoencoder on FFHQ
 
 The following command starts the training for a VQGAN on LSUN Churches: 
 ```
