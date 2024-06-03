@@ -170,7 +170,7 @@ def main(H, vis):
             if step <= H.warmup_iters:
                 optim_warmup(H, step, optim)
 
-        x = next(train_iterator)
+        x = next(train_iterator) # x : [b, 256] -> 256 is latent size in vector-quantized code space
         x = x.cuda()
 
         if H.amp: # True

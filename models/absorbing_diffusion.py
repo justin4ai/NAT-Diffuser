@@ -8,7 +8,7 @@ from .sampler import Sampler
 
 
 class AbsorbingDiffusion(Sampler):
-    def __init__(self, H, denoise_fn, mask_id, embedding_weight, aux_weight=0.01):
+    def __init__(self, H, denoise_fn, mask_id, embedding_weight, aux_weight=0.01): # mask_id : H.codebook_size (1024)
         super().__init__(H, embedding_weight=embedding_weight)
 
         self.num_classes = H.codebook_size
@@ -51,14 +51,18 @@ class AbsorbingDiffusion(Sampler):
         else:
             raise ValueError
 
-    def q_sample(self, x_0, t):
+    def q_sample(self, x_0, t): # x_0 : torch.Size([b, 256]), t : torch.Size([b])
         # samples q(x_t | x_0)
-        # randomly set token to mask with probability t/T
-        x_t, x_0_ignore = x_0.clone(), x_0.clone()
 
-        mask = torch.rand_like(x_t.float()) < (t.float().unsqueeze(-1) / self.num_timesteps)
-        x_t[mask] = self.mask_id
-        x_0_ignore[torch.bitwise_not(mask)] = -1
+        x_t, x_0_ignore = x_0.clone(), x_0.clone() # element of x_0 ranges from 0 to 1024
+
+        # randomly set token to mask with probability t/T
+        mask = torch.rand_like(x_t.float())    <     (t.float().unsqueeze(-1) / self.num_timesteps) 
+
+        x_t[mask] = self.mask_id # self.mask_id is codebook size (1024). Since code is from 0 ~ 1023, masking!
+        x_0_ignore[torch.bitwise_not(mask)] = -1 # ignore values of unmasked positions in x_0
+
+
         return x_t, x_0_ignore, mask
 
     def q_sample_mlm(self, x_0, t):
@@ -96,24 +100,28 @@ class AbsorbingDiffusion(Sampler):
             x_t, x_0_ignore, mask = self.q_sample_mlm(x_0=x_0, t=t)
 
         # sample p(x_0 | x_t)
-        x_0_hat_logits = self._denoise_fn(x_t, t=t).permute(0, 2, 1)
+        x_0_hat_logits = self._denoise_fn(x_t, t=t).permute(0, 2, 1) # codebook(1024)-dimensional classification
  
 
         # Always compute ELBO for comparison purposes
-        cross_entropy_loss = F.cross_entropy(x_0_hat_logits, x_0_ignore, ignore_index=-1, reduction='none').sum(1)
+        cross_entropy_loss = F.cross_entropy(x_0_hat_logits, x_0_ignore, ignore_index=-1, reduction='none').sum(1) # cross entropy only among masked codes
         vb_loss = cross_entropy_loss / t
         vb_loss = vb_loss / pt
         vb_loss = vb_loss / (math.log(2) * x_0.shape[1:].numel())
+
         if self.loss_type == 'elbo':
             loss = vb_loss
+
         elif self.loss_type == 'mlm':
             denom = mask.float().sum(1)
             denom[denom == 0] = 1  # prevent divide by 0 errors.
             loss = cross_entropy_loss / denom
-        elif self.loss_type == 'reweighted_elbo':
+
+        elif self.loss_type == 'reweighted_elbo': # we apply this
             weight = (1 - (t / self.num_timesteps))
             loss = weight * cross_entropy_loss
             loss = loss / (math.log(2) * x_0.shape[1:].numel())
+
         else:
             raise ValueError
 
@@ -191,7 +199,8 @@ class AbsorbingDiffusion(Sampler):
             elbo += cross_entropy_loss / t
         return elbo
 
-    def train_iter(self, x):
+    def train_iter(self, x): # x : [b, 256]
+
         loss, vb_loss = self._train_loss(x)
         stats = {'loss': loss, 'vb_loss': vb_loss}
         return stats

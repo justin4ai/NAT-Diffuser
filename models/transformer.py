@@ -235,7 +235,6 @@ class Transformer(nn.Module):
         self.drop = nn.Dropout(H.embd_pdrop)
 
         # transformer
-
         self.blocks = nn.Sequential(*[Block(H) for _ in range(self.n_layers)])
    
         # decoder head
@@ -254,7 +253,7 @@ class Transformer(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def forward(self, idx, t=None): # torch.Size([20, 256])
+    def forward(self, idx, t=None): # torch.Size([b, 256]) - 
         # each index maps to a (learnable) vector
 
         token_embeddings = self.tok_emb(idx) # torch.Size([20, 256, 512])
@@ -281,6 +280,5 @@ class Transformer(nn.Module):
 
         x = self.ln_f(x)
         logits = self.head(x)
-        print(f"ouptut shape : {logits.size()}") # ouptut shape : torch.Size([20, 256, 1024])
 
-        return logits
+        return logits # torch.Size([20, 256, 1024])

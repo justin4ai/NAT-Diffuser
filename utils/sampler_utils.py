@@ -119,7 +119,7 @@ def retrieve_autoencoder_components_state_dicts(H, components_list, remove_compo
             if component in key:
                 new_key = key[3:]  # remove "ae."
 
-                print(f"utils/sampler_uitls.py / new_key : {new_key}")
+                #print(f"utils/sampler_uitls.py / new_key : {new_key}")
                 if remove_component_from_key: # False
                     new_key = new_key[len(component)+1:]  # e.g. remove "quantize."
 
