@@ -20,18 +20,21 @@ from utils.log_utils import log, log_stats, set_up_visdom, config_log, start_tra
 def main(H, vis):
 
     latents_fp_suffix = '_flipped' if H.horizontal_flip else ''
-    latents_filepath = f'latents/{H.dataset}_{H.latent_shape[-1]}_train_latents{latents_fp_suffix}'
+    latents_filepath = f'latents/{H.dataset}_{H.latent_shape[-1]}_train_latents{latents_fp_suffix}' # we don't have this one
 
     train_with_validation_dataset = False
     if H.steps_per_eval:
         train_with_validation_dataset = True
 
-    if not os.path.exists(latents_filepath):
+    if not os.path.exists(latents_filepath): # True
+        print("!!!latent no exist!!!!")
         ae_state_dict = retrieve_autoencoder_components_state_dicts(
             H, ['encoder', 'quantize', 'generator']
-        )
+        ) # corresponding learned weights loaded
+        
         ae = VQAutoEncoder(H)
         ae.load_state_dict(ae_state_dict, strict=False)
+
         # val_loader will be assigned to None if not training with validation dataest
         train_loader, val_loader = get_data_loaders(
             H.dataset,
@@ -45,10 +48,12 @@ def main(H, vis):
 
         log("Transferring autoencoder to GPU to generate latents...")
         ae = ae.cuda()  # put ae on GPU for generating
-        generate_latent_ids(H, ae, train_loader, val_loader)
+
+        generate_latent_ids(H, ae, train_loader, val_loader) # latent_id saved at ./latents/
         log("Deleting autoencoder to conserve GPU memory...")
+        
         ae = ae.cpu()
-        ae = None
+        ae = None # release ae
 
     train_latent_loader, val_latent_loader = get_latent_loaders(H, get_validation_loader=train_with_validation_dataset)
 
@@ -59,14 +64,18 @@ def main(H, vis):
     )
 
     embedding_weight = quanitzer_and_generator_state_dict.pop(
-        'embedding.weight')
+        'embedding.weight') # codebook
+    
     if H.deepspeed:
         embedding_weight = embedding_weight.half()
+
     embedding_weight = embedding_weight.cuda()
-    generator = Generator(H)
+    generator = Generator(H) # decoder
 
     generator.load_state_dict(quanitzer_and_generator_state_dict, strict=False)
     generator = generator.cuda()
+
+    ### absorbing diffusion sampler ###
     sampler = get_sampler(H, embedding_weight).cuda()
 
     optim = torch.optim.Adam(sampler.parameters(), lr=H.lr)
@@ -83,6 +92,7 @@ def main(H, vis):
     mean_losses = np.array([])
     start_step = 0
     log_start_step = 0
+    
     if H.load_step > 0:
         start_step = H.load_step + 1
 
@@ -154,6 +164,7 @@ def main(H, vis):
 
     for step in range(start_step, H.train_steps):
         step_start_time = time.time()
+        
         # lr warmup
         if H.warmup_iters:
             if step <= H.warmup_iters:
@@ -162,14 +173,15 @@ def main(H, vis):
         x = next(train_iterator)
         x = x.cuda()
 
-        if H.amp:
+        if H.amp: # True
             optim.zero_grad()
             with torch.cuda.amp.autocast():
-                stats = sampler.train_iter(x)
+                stats = sampler.train_iter(x) # loss calculation
 
             scaler.scale(stats['loss']).backward()
             scaler.step(optim)
             scaler.update()
+
         else:
             stats = sampler.train_iter(x)
 

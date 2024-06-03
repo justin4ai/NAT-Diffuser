@@ -20,7 +20,7 @@ class AbsorbingDiffusion(Sampler):
         self._denoise_fn = denoise_fn
         self.n_samples = H.batch_size
         self.loss_type = H.loss_type
-        self.mask_schedule = H.mask_schedule
+        self.mask_schedule = H.mask_schedule # random
         self.aux_weight = aux_weight
         self.register_buffer('Lt_history', torch.zeros(self.num_timesteps+1))
         self.register_buffer('Lt_count', torch.zeros(self.num_timesteps+1))
@@ -43,7 +43,7 @@ class AbsorbingDiffusion(Sampler):
 
             return t, pt
 
-        elif method == 'uniform':
+        elif method == 'uniform': # this one
             t = torch.randint(1, self.num_timesteps+1, (b,), device=device).long()
             pt = torch.ones_like(t).float() / self.num_timesteps
             return t, pt
@@ -90,7 +90,7 @@ class AbsorbingDiffusion(Sampler):
 
         # make x noisy and denoise
 
-        if self.mask_schedule == 'random':
+        if self.mask_schedule == 'random': # this one
             x_t, x_0_ignore, mask = self.q_sample(x_0=x_0, t=t)
         elif self.mask_schedule == 'fixed':
             x_t, x_0_ignore, mask = self.q_sample_mlm(x_0=x_0, t=t)

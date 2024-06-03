@@ -105,18 +105,22 @@ def get_latent_loaders(H, get_validation_loader=True, shuffle=True):
 # TODO: rethink this whole thing - completely unnecessarily complicated
 def retrieve_autoencoder_components_state_dicts(H, components_list, remove_component_from_key=False):
     state_dict = {}
-    # default to loading ema models first
+
+    # default to loading ema models first. If fails, load simple vqgan
     ae_load_path = f"logs/{H.ae_load_dir}/saved_models/vqgan_ema_{H.ae_load_step}.th"
     if not os.path.exists(ae_load_path):
         ae_load_path = f"logs/{H.ae_load_dir}/saved_models/vqgan_{H.ae_load_step}.th"
+
     log(f"Loading VQGAN from {ae_load_path}")
     full_vqgan_state_dict = torch.load(ae_load_path, map_location="cpu")
 
     for key in full_vqgan_state_dict:
-        for component in components_list:
+        for component in components_list: # ['encoder', 'quantize', 'generator']
             if component in key:
                 new_key = key[3:]  # remove "ae."
-                if remove_component_from_key:
+
+                print(f"utils/sampler_uitls.py / new_key : {new_key}")
+                if remove_component_from_key: # False
                     new_key = new_key[len(component)+1:]  # e.g. remove "quantize."
 
                 state_dict[new_key] = full_vqgan_state_dict[key]
