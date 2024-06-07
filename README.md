@@ -1,5 +1,7 @@
 ## NAT-Diffuser : Discrete Absorbing Diffusion Meets Neighborhood Attnetion Transformers at Vector-Quantized Space
 
+
+
 <div align="center">
     2024.04.24 ~ 2024.06.14
 </div>
@@ -22,6 +24,14 @@
 Both discrete diffusion and VQ-GAN models are verified to be trainable with ```batch_size 4``` on single NVIDIA RTX ..60Ti - even on Colab GPU with lower batch size. 
 
 Furthermore, you can even make diffusion model faster via customizing the configurations of **Hydra-1D-NA** module, which leads to improvement in both train and inference time.
+
+
+
+## News 🚀
+
+![front_page_sample](assets/demo.png)
+
+Web demo is now available with your own checkpoints!
 
 ## Setup
 
@@ -120,6 +130,16 @@ Simply running the following command will let you get some inference results. No
 ```
 bash sample_ffhq.sh
 ```
+
+### Web Demo
+
+Gradio demo is also supported.
+
+```
+python3 demo.py --sampler absorbing --dataset ffhq --log_dir ffhq_samples --temp 0.8 --ae_load_dir vqgan_ffhq --ae_load_step {VQGAN_STEPS} --load_dir pretrained_samplers --load_step {ABSORBING_STEPS} --ema --sample_steps 256 --num_samples 16
+```
+
+Note only ```--num_samples 1``` or ```16``` is available for now. I am working on adding some more features.
 
 ### Set up visdom server
 

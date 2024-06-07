@@ -11,3 +11,4 @@ _cache_ReposdatasetsLSUNchurchoutdoortrainlmdb
 _pkl_files/
 *.txt
 tmp*
+flagged/

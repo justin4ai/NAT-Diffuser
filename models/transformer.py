@@ -208,7 +208,7 @@ class Block(nn.Module):
         super().__init__()
         self.ln1 = nn.LayerNorm(H.bert_n_emb)
         self.ln2 = nn.LayerNorm(H.bert_n_emb)
-        #self.attn = CausalSelfAttention(H)
+        self.attn = CausalSelfAttention(H)
         
         h_params = H.items()
         # Save parameters of H
@@ -216,7 +216,7 @@ class Block(nn.Module):
             for key, value in h_params:
                 file.write(f"{key}: {value}\n")
 
-        self.attn = Hydra1DNeighborhoodAttention(H)
+        #self.attn = Hydra1DNeighborhoodAttention(H)
         self.mlp = nn.Sequential(
             nn.Linear(H.bert_n_emb, 4 * H.bert_n_emb),
             nn.GELU(),  # nice

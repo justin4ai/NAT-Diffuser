@@ -76,6 +76,7 @@ def get_sampler_H_from_parser(parser):
         H_sampler = HparamsAutoregressive(dataset)
     H.update(H_sampler)  # overwrites old (vqgan) H.batch_size
     H = apply_parser_values_to_H(H, parser_args)
+    H.num_samples = parser_args.num_samples
     return H
 
 
@@ -89,7 +90,11 @@ def set_up_sampler_parser(parser):
 def get_sampler_hparams():
     parser = argparse.ArgumentParser("Parser for training discrete latent sampler models :)")
     set_up_sampler_parser(parser)
+    
+    parser.add_argument("--num_samples", type=int, default=1, help="1 or 25")
+    
     H = get_sampler_H_from_parser(parser)
+
     return H
 
 
