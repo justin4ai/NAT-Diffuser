@@ -171,7 +171,7 @@ class Hydra1DNeighborhoodAttention(nn.Module):
 
             q = (self.rotary_emb.rotate_queries_or_keys(_q).to(self.device) for _q in q)
             k = (self.rotary_emb.rotate_queries_or_keys(_k).to(self.device) for _k in k)
-            v = (self.rotary_emb.rotate_queries_or_keys(_v).to(self.device) for _v in v)
+            v = (_v.to(self.device) for _v in v)
 
             attention = [na1d(_q.permute(0,2,1,3), _k.permute(0,2,1,3), _v.permute(0,2,1,3), kernel_size = _kernel_size, dilation = _dilation) \
                          for _q, _k, _v, _kernel_size, _dilation in zip(q, k, v, self.kernel_sizes, self.dilations) ]
