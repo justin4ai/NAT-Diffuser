@@ -1,12 +1,27 @@
-## NAT Diffuser : Discrete Absorbing Diffusion Meets Neighborhood Attnetion Transformers at Vector-Quantized Space
+## NAT-Diffuser : Discrete Absorbing Diffusion Meets Neighborhood Attnetion Transformers at Vector-Quantized Space
+
+<div align="center">
+    2024.04.24 ~ 2024.06.14
+</div>
+
+
+<div align="center">
+    <a href="">Report(coming soon)</a> | 
+    <a href="">PPT(coming soon)</a>
+</div>
 
 
 
-
-
+<br>
 
 ![front_page_sample](assets/NAT-Diffuser.png)
 
+
+**NAT-Diffuser** is the discrete absorbing diffusion model whose denoising function is GPT with **Hydra-1D-NA** module. It is able to generate high-fidelity images from the vector-quantized code space.
+
+Both discrete diffusion and VQ-GAN models are verified to be trainable with ```batch_size 4``` on single NVIDIA RTX ..60Ti - even on Colab GPU with lower batch size. 
+
+Furthermore, you can even make diffusion model faster via customizing the configurations of **Hydra-1D-NA** module, which leads to improvement in both train and inference time.
 
 ## Setup
 
@@ -22,6 +37,7 @@ Run the following command to clone this repo using [git](https://git-scm.com/boo
 git clone https://github.com/justin4ai/NAT-Diffuser.git && cd NAT-Diffuser
 conda create --name natdiff --file requirements.yml
 conda activate natdiff  
+pip install rotary-embedding-torch
 ```
 
 
@@ -89,8 +105,7 @@ Pre-trained models can be found [here](https://drive.google.com/drive/folders/1D
 ```
 
 Note the checkpoints under ```log``` folder are trained on 5k real images from **140k Real and Fake Faces** by us.
-- vqgan_ema_1225000.th : --batch_size 64, ~2 days on H100
-- absorbing_125000.th : --batch_size 256, ~1 day on H100
+
 
 
 ## Commands
@@ -98,6 +113,13 @@ If your GPU has less VRAM than a 2080 Ti then you may need to train using smalle
 
 For a detailed list of all commands options, including altering model architecture, logging output, checkpointing frequency, etc., please add the `--help` flag to the end of your command.
 
+### Inference
+
+Simply running the following command will let you get some inference results. Note you need pre-trained VQ-GAN and absorbing diffusion checkpoints.
+
+```
+bash sample_ffhq.sh
+```
 
 ### Set up visdom server
 
@@ -178,7 +200,12 @@ Use the `--shape` flag to specify the dimensions of the latents to generate.
 
 ## References
 
-The code for this project heavily depends on [Unleashing Transformers](https://github.com/samb-t/unleashing-transformers) and [StyleNAT](https://github.com/SHI-Labs/StyleNAT).
+The code for this project heavily depends on [Unleashing Transformers](https://github.com/samb-t/unleashing-transformers) for discrete absorbing diffusion. Most of changes have been made with the help of [NATTEN](https://github.com/SHI-Labs/NATTEN) package for runtime improvement.
+
+Also I appreciate the help of [StyleNAT](https://github.com/SHI-Labs/StyleNAT) author in understanding Hydra-NA module.
+
 
 ## Citation
+
+@JunyeongAhn | Dept. of Data Science, Hanyang University
 
