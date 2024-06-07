@@ -29,7 +29,9 @@ Furthermore, you can even make diffusion model faster via customizing the config
 
 ## News 🚀
 
-![front_page_sample](assets/demo.png)
+<p align="center">
+    <img src="assets/demo.png" alt="Alt text" width="450">
+</p>
 
 Web demo is now available with your own checkpoints!
 
@@ -225,7 +227,20 @@ The code for this project heavily depends on [Unleashing Transformers](https://g
 Also I appreciate the help of [StyleNAT](https://github.com/SHI-Labs/StyleNAT) author in understanding Hydra-NA module.
 
 
+## To-Do
+
+- [x] **Release Inference Code of absorbing diffusion models.**
+- [x] **Release Pre-trained weights of VQ-GAN and aborbing diffusion models.**
+- [x] **Release Training Code of VQ-GAN and absorbing diffusion models.**
+- [x] **Release Gradio Demo.**
+- [x] **Release Evaluation Code for calculating FID.**
+- [ ] Release Google Colab.
+- [ ] Release Evaluation Code for calculating DINOv2-ViT-L/14.
+      
+
+
 ## Citation
 
-@JunyeongAhn | Dept. of Data Science, Hanyang University
-
+```
+@Junyeong J. Ahn | Dept. of Data Science, Hanyang University
+```

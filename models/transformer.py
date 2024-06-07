@@ -118,17 +118,17 @@ class Hydra1DNeighborhoodAttention(nn.Module):
 
     def forward(self, x, layer_past=None):
 
-        B, T, C = x.size() #torch.Size([20, 256, 512])
+        B, T, C = x.size() #torch.Size([B, 256, 512])
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs) # torch.Size([20, 8, 256, 64])
+        k = self.key(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs) # torch.Size([B, 8, 256, 64])
         q = self.query(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
         v = self.value(x).view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
 
         B, nh, T, hs = q.size()
 
 
-        present = torch.stack((k, v)) # torch.Size([2, 20, 8, 256, 64]) / not used in our code
+        present = torch.stack((k, v)) # torch.Size([2, B, nh, 256, 64]) / not used in our code
         if self.causal and layer_past is not None:
             past_key, past_value = layer_past
             k = torch.cat((past_key, k), dim=-2)
@@ -220,7 +220,7 @@ class Block(nn.Module):
 
         if layer_past is not None or return_present:
             return x, present
-        return x # torch.Size([20, 256, 512])
+        return x # torch.Size([B, 256, 512])
 
 
 class Transformer(nn.Module):
@@ -250,6 +250,7 @@ class Transformer(nn.Module):
         # decoder head
         self.ln_f = nn.LayerNorm(self.n_embd)
         self.head = nn.Linear(self.n_embd, self.codebook_size, bias=False)
+        self.use_hydra_na = H.use_hydar_na
 
     def get_block_size(self):
         return self.block_size
@@ -263,10 +264,10 @@ class Transformer(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    def forward(self, idx, t=None): # torch.Size([b, 256]) - 
+    def forward(self, idx, t=None): # torch.Size([B, 256]) - 
         # each index maps to a (learnable) vector
 
-        token_embeddings = self.tok_emb(idx) # torch.Size([20, 256, 512])
+        token_embeddings = self.tok_emb(idx) # torch.Size([B, 256, 512])
 
         if self.causal:
             token_embeddings = torch.cat(
@@ -280,15 +281,16 @@ class Transformer(nn.Module):
 
         position_embeddings = self.pos_emb[:, :t, :]
 
-        x = token_embeddings + position_embeddings
+        #x = token_embeddings + position_embeddings
+        x = token_embeddings if self.use_hydra_na == True else token_embeddings + position_embeddings # positional encoding will be done inside Hydra NAT
         x = self.drop(x)
 
         for block in self.blocks:
-            # torch.Size([20, 256, 512])
+            # torch.Size([B, 256, 512])
             x = block(x)
-            # torch.Size([20, 256, 512])
+            # torch.Size([B, 256, 512])
 
         x = self.ln_f(x)
         logits = self.head(x)
 
-        return logits # torch.Size([20, 256, 1024])
+        return logits # torch.Size([B, 256, 1024]) # code classification
