@@ -77,6 +77,7 @@ def get_sampler_H_from_parser(parser):
     H.update(H_sampler)  # overwrites old (vqgan) H.batch_size
     H = apply_parser_values_to_H(H, parser_args)
     H.num_samples = parser_args.num_samples
+    H.use_hydra_na = parser_args.use_hydra_na
     return H
 
 
@@ -92,6 +93,7 @@ def get_sampler_hparams():
     set_up_sampler_parser(parser)
     
     parser.add_argument("--num_samples", type=int, default=1, help="1 or 25")
+    parser.add_argument("--use_hydra_na", type=bool, default=True, help="Whether to use Hydra-1D-NA or not(casualattention)")
     
     H = get_sampler_H_from_parser(parser)
 

@@ -74,10 +74,12 @@ class CausalSelfAttention(nn.Module):
         y = self.resid_drop(self.proj(y)) # torch.Size([20, 256, 512])
         return y, present
     
+
 class Hydra1DNeighborhoodAttention(nn.Module):
     def __init__(self, H):
         super().__init__()
         assert H.bert_n_emb % H.bert_n_head == 0
+
         # key, query, value projections for all heads
         self.key = nn.Linear(H.bert_n_emb, H.bert_n_emb)
         self.query = nn.Linear(H.bert_n_emb, H.bert_n_emb)
@@ -94,7 +96,7 @@ class Hydra1DNeighborhoodAttention(nn.Module):
         self.kernel_sizes = [7] * len(self.dilations)
         self.num_splits = len(self.kernel_sizes)
 
-
+        self.device = torch.device("cuda:0")
         self.use_rpb = False
 
         if self.causal:
@@ -113,6 +115,7 @@ class Hydra1DNeighborhoodAttention(nn.Module):
         self.rpb = nn.ParameterList([nn.Parameter(torch.zeros(self.n_head//self.num_splits + 1, (2*k-1), (2*k-1))) for k in self.kernel_sizes])
         self.rotary_emb = RotaryEmbedding(dim = 32)
 
+
     def forward(self, x, layer_past=None):
 
         B, T, C = x.size() #torch.Size([20, 256, 512])
@@ -124,13 +127,9 @@ class Hydra1DNeighborhoodAttention(nn.Module):
 
         B, nh, T, hs = q.size()
 
-        #########################
-        ## - sync 1 finishes - ##
-        #########################
 
         present = torch.stack((k, v)) # torch.Size([2, 20, 8, 256, 64]) / not used in our code
         if self.causal and layer_past is not None:
-            print("?")
             past_key, past_value = layer_past
             k = torch.cat((past_key, k), dim=-2)
             v = torch.cat((past_value, v), dim=-2)
@@ -149,57 +148,41 @@ class Hydra1DNeighborhoodAttention(nn.Module):
                         dilation=_dilation,
                         rpb=_rpb) \
                 for _q,_k,_rpb,_kernel_size,_dilation in zip(q, k, self.rpb, self.kernel_sizes, self.dilations)]
-        else:
+            
+            attention = [a.softmax(dim=-1) for a in attention]
+            attention = [self.attn_drop(a) for a in attention]
 
-            q = self.rotary_emb.rotate_queries_or_keys(q)
-            k = self.rotary_emb.rotate_queries_or_keys(k)
-            v = self.rotary_emb.rotate_queries_or_keys(v)
-
-            attention = [na1d(_q, _k, _v, kernel_size = _kernel_size, dilation = _dilation) \
-                         for _q, _k, _v, _kernel_size, _dilation in zip(q, k, v, self.kernel_sizes, self.dilations) ]
-
-
-
-        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
-        #att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1))) # torch.Size([20, 8, 256, 256])
-        #B, nh, T, hs = q.size()
-
-
-        # print(q[0].size())
-        # print(k[0].size())
-        # print(self.rpb[0].size())
-        # print(self.kernel_sizes[0])
-        # print(self.dilations[0])
-
-        #attention = [na1d_qk(_q.permute(0, 2 ,1, 3), _k.permute(0, 2 ,1, 3),
-
-
-        attention = [a.softmax(dim=-1) for a in attention]
-        attention = [self.attn_drop(a) for a in attention]
-
-        x = [na2d_av(_attn, _v,
+            x = [na2d_av(_attn, _v,
                      kernel_size=_k,
                      dilation=_d) \
+                     
              for _attn, _v, _k, _d in zip(attention, v, self.kernel_sizes, self.dilations)]
+            
+            y = torch.cat(x, dim=1)
 
-        y = torch.cat(x, dim=1)
+            if self.causal and layer_past is None: # not used in this implementation
+                print("inf!!")
+                att = att.masked_fill(self.mask[:, :, :T, :T] == 0, float('-inf'))
 
-        if self.causal and layer_past is None: # not used in this implementation
-            print("inf!!")
-            att = att.masked_fill(self.mask[:, :, :T, :T] == 0, float('-inf'))
+            y = y.transpose(1, 2).contiguous().view(B, T, C)
+                
 
+        else: # use rotary_emb for this implementation
 
+            q = (self.rotary_emb.rotate_queries_or_keys(_q).to(self.device) for _q in q)
+            k = (self.rotary_emb.rotate_queries_or_keys(_k).to(self.device) for _k in k)
+            v = (self.rotary_emb.rotate_queries_or_keys(_v).to(self.device) for _v in v)
 
-        # att = F.softmax(att, dim=-1) # torch.Size([20, 8, 256, 256])
-        # att = self.attn_drop(att) # torch.Size([20, 8, 256, 256])
-        #y = att @ v  # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
-        # re-assemble all head outputs side by side
-        print(f"y shape : {y.size()}")
-        y = y.transpose(1, 2).contiguous().view(B, T, C)
+            attention = [na1d(_q.permute(0,2,1,3), _k.permute(0,2,1,3), _v.permute(0,2,1,3), kernel_size = _kernel_size, dilation = _dilation) \
+                         for _q, _k, _v, _kernel_size, _dilation in zip(q, k, v, self.kernel_sizes, self.dilations) ]
+
+        y = torch.cat(attention, dim=1)
+        y = y.reshape(B, T, C)
 
         # output projection
-        y = self.resid_drop(self.proj(y)) # torch.Size([20, 256, 512])
+        y = self.resid_drop(self.proj(y)) # torch.Size([B, 256, 512])
         return y, present
+
 
 class Block(nn.Module):
     """ an unassuming Transformer block """
@@ -208,7 +191,7 @@ class Block(nn.Module):
         super().__init__()
         self.ln1 = nn.LayerNorm(H.bert_n_emb)
         self.ln2 = nn.LayerNorm(H.bert_n_emb)
-        self.attn = CausalSelfAttention(H)
+
         
         h_params = H.items()
         # Save parameters of H
@@ -216,7 +199,9 @@ class Block(nn.Module):
             for key, value in h_params:
                 file.write(f"{key}: {value}\n")
 
-        #self.attn = Hydra1DNeighborhoodAttention(H)
+        
+        #self.attn = CausalSelfAttention(H)
+        self.attn = Hydra1DNeighborhoodAttention(H) if H.use_hydra_na == True else CausalSelfAttention(H)
         self.mlp = nn.Sequential(
             nn.Linear(H.bert_n_emb, 4 * H.bert_n_emb),
             nn.GELU(),  # nice
@@ -226,11 +211,11 @@ class Block(nn.Module):
 
     def forward(self, x, layer_past=None, return_present=False):
 
-        attn, present = self.attn(self.ln1(x), layer_past) # torch.Size([20, 256, 512])
+        attn, present = self.attn(self.ln1(x), layer_past) # torch.Size([B, 256, 512])
 
-        x = x + attn # torch.Size([20, 256, 512])
+        x = x + attn # torch.Size([B, 256, 512])
 
-        x = x + self.mlp(self.ln2(x)) # torch.Size([20, 256, 512])
+        x = x + self.mlp(self.ln2(x)) # torch.Size([B, 256, 512])
 
 
         if layer_past is not None or return_present:
