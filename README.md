@@ -1,6 +1,10 @@
 ## NAT-Diffuser : Discrete Absorbing Diffusion Meets Neighborhood Attnetion Transformers at Vector-Quantized Space
 
 
+<p align="center">
+    <img src="assets/NAT-Diffuser-logo.png" alt="Alt text" width="300">
+</p>
+
 
 <div align="center">
     2024.04.24 ~ 2024.06.14
@@ -16,7 +20,9 @@
 
 <br>
 
-![front_page_sample](assets/NAT-Diffuser.png)
+<p align="center">
+    <img src="assets/NAT-Diffuser-architecture.png" alt="Alt text" width="650">
+</p>
 
 
 **NAT-Diffuser** is the discrete absorbing diffusion model whose denoising function is GPT with **Hydra-1D-NA** module. It is able to generate high-fidelity images from the vector-quantized code space.
@@ -184,14 +190,19 @@ This section contains simple template commands for calculating metrics and other
 python experiments/calc_FID.py --sampler absorbing --dataset churches --log_dir FID_log --ae_load_dir vqgan_churches --ae_load_step 2200000  --load_dir absorbing_churches --load_step 2000000 --ema --n_samples 50000 --temp 0.9
 ```
 
-**Calculate PRDC Scores**
+**Calculate DINOv2-ViT-L/14** 
+
+According to [Exposing Flaws](https://arxiv.org/abs/2306.04675), FID score doens't reflect the fidelity of generated images, especially by diffusion models. The paper authors figured out DINOv2-ViT-L/14 is an alternative towards better evaluation for human perception. This code will be released as a separate repository soon.
+
+
+<!-- **Calculate PRDC Scores**
 
 ```
 python experiments/calc_PRDC.py --sampler absorbing --dataset churches --log_dir PRDC_log --ae_load_dir vqgan_churches --ae_load_step 2200000 --load_dir absorbing_churches --load_step 2000000 --ema --n_samples 50000
-```
+``` -->
 
 
-**Calculate ELBO Estimates**
+<!-- **Calculate ELBO Estimates**
 
 The following command fine-tunes a Vector-Quantized autoencoder to compute reconstruction likelihood, and then evaluates the ELBO of the overall model.
 
@@ -199,16 +210,16 @@ The following command fine-tunes a Vector-Quantized autoencoder to compute recon
 python experiments/calc_approximate_ELBO.py --sampler absorbing --dataset ffhq --log_dir nll_churches --ae_load_dir vqgan_churches --ae_load_step 2200000 --load_dir absorbing_churches --load_step 2000000 --ema --steps_per_eval 5000 --train_steps 10000
 ```
 
-NOTE: the `--steps_per_eval` flag is required for this script, as a validation dataset is used. 
+NOTE: the `--steps_per_eval` flag is required for this script, as a validation dataset is used.  -->
 
 
-**Find Nearest Neighbours**
+<!-- **Find Nearest Neighbours**
 
 Produces a random batch of samples and finds the nearest neighbour images in the training set based on LPIPS distance.
 
 ```
 python experiments/calc_nearest_neighbours.py --sampler absorbing --dataset churches --log_dir nearest_neighbours_churches --ae_load_dir vqgan_churches --ae_load_step 2200000 --load_dir absorbing_churches --load_step 2000000 --ema
-```
+``` -->
 
 **Generate Higher Resolution Samples**
 

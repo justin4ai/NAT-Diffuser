@@ -24,7 +24,7 @@ class HparamsAbsorbing(HparamsBase):
             self.lr = 2e-4
             self.warmup_iters = 10000
 
-        elif self.dataset == "ffhq":
+        elif self.dataset == "ffhq" or "big_ffhq":
             self.batch_size = 20
             self.bert_n_emb = 512
             self.bert_n_head = 8

@@ -29,7 +29,7 @@ class HparamsVQGAN(HparamsBase):
             self.perceptual_weight = 1.0
             self.res_blocks = 2
 
-        elif self.dataset == 'ffhq':
+        elif self.dataset in ['ffhq', 'big_ffhq']:
             self.attn_resolutions = [16]
             self.batch_size = 3
             self.ch_mult = [1, 1, 2, 2, 4]

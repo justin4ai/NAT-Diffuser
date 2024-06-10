@@ -5,3 +5,5 @@
 - dataset: ffhq
   # path: "/datasets/FFHQ"
   path: "../../datasets/train/"
+- dataset: big_ffhq
+  path: "../../datasets/big_train/"

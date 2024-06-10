@@ -123,7 +123,7 @@ def get_datasets(
                 transform=transform_with_flip,
             )
 
-    elif dataset_name == "ffhq" or "custom":
+    elif dataset_name == "ffhq" or "big_ffhq" or "ffhq_vgg" or "custom":
         train_dataset = torchvision.datasets.ImageFolder(
             dataset_path,
             transform=transform,
