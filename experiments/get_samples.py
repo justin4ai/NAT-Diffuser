@@ -17,6 +17,8 @@ def main(H, vis):
         'embedding.weight')
     if H.deepspeed:
         embedding_weight = embedding_weight.half()
+
+    print(H.num_samples)
     embedding_weight = embedding_weight.cuda()
     generator = Generator(H)
 
@@ -25,7 +27,7 @@ def main(H, vis):
     sampler = get_sampler(H, embedding_weight).cuda()
 
     sampler = load_model(sampler, f'{H.sampler}', H.load_step, H.load_dir) # ema or not?
-    sampler.n_samples = 1  # get samples in 5x5 grid
+
 
     for i in range(30000):
         images = get_samples(H, generator, sampler)

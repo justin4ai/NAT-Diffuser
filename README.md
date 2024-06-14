@@ -1,10 +1,12 @@
-## NAT-Diffuser : Discrete Absorbing Diffusion Meets Neighborhood Attnetion Transformers at Vector-Quantized Space
+## NAT-Diffuser : Discrete Absorbing Diffusion Meets Neighborhood Attention Transformers at Vector-Quantized Space
 
 
 <p align="center">
     <img src="assets/NAT-Diffuser-logo.png" alt="Alt text" width="300">
 </p>
-
+<p align="center">
+    <img src="assets/NAT-faces.png" alt="Alt text" width="800">
+</p>
 
 <div align="center">
     2024.04.24 ~ 2024.06.14
@@ -27,7 +29,9 @@
 
 **NAT-Diffuser** is the discrete absorbing diffusion model whose denoising function is GPT with **Hydra-1D-NA** module. It is able to generate high-fidelity images from the vector-quantized code space.
 
-Both discrete diffusion and VQ-GAN models are verified to be trainable with ```batch_size 4``` on single NVIDIA RTX ..60Ti - even on Colab GPU with lower batch size. 
+
+
+Both discrete diffusion and VQ-GAN models are verified to be trainable with ```batch_size 4``` on single NVIDIA RTX ..80Ti - even on Colab GPU with lower batch size. 
 
 Furthermore, you can even make diffusion model faster via customizing the configurations of **Hydra-1D-NA** module, which leads to improvement in both train and inference time.
 
@@ -35,11 +39,21 @@ Furthermore, you can even make diffusion model faster via customizing the config
 
 ## News 🚀
 
+### 2024.06.14
+
+```absorbing_850000.th``` - we use ```absorbing_125000.th``` for the project report and presentation - model checkpoint trained on H100 is saved. This pre-trained model will be used and released after the semester ends. Stay tuned!
+
+
+### 2024.06.07
+
 <p align="center">
     <img src="assets/demo.png" alt="Alt text" width="450">
 </p>
 
 Web demo is now available with your own checkpoints!
+
+
+
 
 ## Setup
 
