@@ -14,8 +14,8 @@
 
 
 <div align="center">
-    <a href="">Report(coming soon)</a> | 
-    <a href="">PPT(coming soon)</a>
+    Report(coming soon) | 
+    <a href="https://drive.google.com/drive/folders/1Rv1AE6oXEGKxbhQbIYhSB1mW32xCjkSO?usp=sharing">PPT(Google Drive)</a>
 </div>
 
 
@@ -41,7 +41,7 @@ Furthermore, you can even make diffusion model faster via customizing the config
 
 ### 2024.06.14
 
-```absorbing_850000.th``` - we use ```absorbing_125000.th``` for the project report and presentation - model checkpoint trained on H100 is saved. This pre-trained model will be used and released after the semester ends. Stay tuned!
+```absorbing_850000.th``` model checkpoint trained is saved. This pre-trained model will be used and released after the semester ends. Stay tuned!
 
 
 ### 2024.06.07
@@ -259,8 +259,7 @@ Also I appreciate the help of [StyleNAT](https://github.com/SHI-Labs/StyleNAT) a
 - [x] **Release Training Code of VQ-GAN and absorbing diffusion models.**
 - [x] **Release Gradio Demo.**
 - [x] **Release Evaluation Code for calculating FID.**
-- [ ] Release Google Colab.
-- [ ] Release Evaluation Code for calculating DINOv2-ViT-L/14.
+
       
 
 
