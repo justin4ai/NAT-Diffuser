@@ -14,8 +14,8 @@
 
 
 <div align="center">
-    Report(coming soon) | 
-    <a href="https://drive.google.com/drive/folders/1Rv1AE6oXEGKxbhQbIYhSB1mW32xCjkSO?usp=sharing">PPT(Google Drive)</a>
+    <a href = "https://drive.google.com/file/d/1ufh3AXevV5hYXNiO0SH9g87KzOkj-m3Z/view?usp=sharing">Paper</a> | 
+    <a href="https://drive.google.com/drive/folders/1Rv1AE6oXEGKxbhQbIYhSB1mW32xCjkSO?usp=sharing">PPT</a>
 </div>
 
 
