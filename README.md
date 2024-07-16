@@ -46,9 +46,7 @@ Furthermore, you can even make diffusion model faster via customizing the config
 
 ### 2024.06.07
 
-<p align="center">
-    <img src="assets/demo.png" alt="Alt text" width="450">
-</p>
+
 
 Web demo is now available with your own checkpoints!
 
